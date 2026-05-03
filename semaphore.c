@@ -30,7 +30,7 @@ void release_bidding_slot(void) {
     // This increments the semaphore count
     sem_post(&active_bids_semaphore);
     
-    // Optional: Print current available slots (for debugging)
+    // optional: Print current available slots (for debugging)
     int current_value;
     sem_getvalue(&active_bids_semaphore, &current_value);
     printf("[SEMAPHORE] Bid finished. %d slots available\n", current_value);
