@@ -4,10 +4,10 @@
 #include <semaphore.h>
 #include <pthread.h>
 
-// Global semaphore for limiting concurrent bids
+// a global semaphore for limiting concurrent bids
 extern sem_t active_bids_semaphore;
 
-// Maximum number of bids that can be processed simultaneously
+// Max bids that can be processed simultaneously
 #define MAX_CONCURRENT_BIDS 3
 
 // Function prototypes
