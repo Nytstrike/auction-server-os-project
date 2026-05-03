@@ -1,7 +1,7 @@
 #include "auction.h"
 #include "semaphore.h"
 #include <unistd.h>
-#include <errno.h> // ETIMEOUT USED 
+#include <errno.h>
 
 //global definitions
 
@@ -20,7 +20,7 @@ pthread_mutex_t history_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t stats_mutex   = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t bidder_mutex  = PTHREAD_MUTEX_INITIALIZER;
 
-// Protected by stats_mutex
+// protected by stats_mutex
 static int current_active_bidders = 0;
 
 //initialization fuction:
@@ -74,7 +74,7 @@ void initialize_bidders(void) {
 /*
  * check_and_place_auto_bid
  *
- * Called OUTSIDE any item mutex lock. Checks whether the outbid bidder
+ * called outside any item mutex lock. Checks whether the outbid bidder
  * can afford to counter-bid and, if so, spawns a new thread to process
  * the auto-bid.
  *
@@ -99,7 +99,7 @@ int check_and_place_auto_bid(int bidder_id, int item_id, int current_price) {
     int next_bid = current_price + b->auto_bid_increment;
 
     if (next_bid <= b->budget && b->is_active) {
-        // Build the auto-bid action while we still hold bidder_mutex
+        // build the auto-bid action while we still hold bidder_mutex
         bid_action* auto_bid = (bid_action*)malloc(sizeof(bid_action));
         if (!auto_bid) {
             pthread_mutex_unlock(&bidder_mutex);
@@ -117,7 +117,7 @@ int check_and_place_auto_bid(int bidder_id, int item_id, int current_price) {
 
         pthread_mutex_unlock(&bidder_mutex);
 
-        // Spawn a new thread so the auto-bid acquires its own semaphore
+        // spawn a new thread so the auto-bid acquires its own semaphore
         // slot and does not recurse into the current call stack.
         pthread_t auto_thread;
         if (pthread_create(&auto_thread, NULL, process_bid, auto_bid) != 0) {
@@ -140,7 +140,7 @@ int check_and_place_auto_bid(int bidder_id, int item_id, int current_price) {
 /*
  * notify_outbid
  *
- * Must be called OUTSIDE items[item_id].mutex (see process_bid for details).
+ * must be called outside items[item_id].mutex (see process_bid for details).
  */
 void notify_outbid(int bidder_id, int item_id, int new_price, int new_highest_bidder) {
     if (bidder_id < 0 || bidder_id >= num_bidders) return;
@@ -151,11 +151,11 @@ void notify_outbid(int bidder_id, int item_id, int new_price, int new_highest_bi
             item_id, new_price, new_highest_bidder);
     send_private_notification(bidder_id, notification);
 
-    // Trigger auto-bid for the outbid bidder (safe: called outside item mutex)
+    // trigger auto-bid for the outbid bidder (safe: called outside item mutex)
     check_and_place_auto_bid(bidder_id, item_id, new_price);
 }
 
-// ==================== NOTIFICATION FUNCTIONS ====================
+// NOTIFICATION FUNCTIONS
 
 void broadcast_notification(const char* message, int exclude_bidder) {
     (void)exclude_bidder;
@@ -172,7 +172,7 @@ void send_private_notification(int bidder_id, const char* message) {
     pthread_mutex_unlock(&log_mutex);
 }
 
-// ==================== TIMER THREAD (BID TIMEOUT) ====================
+// TIMER THREAD (BID TIMEOUT)
 
 void* auction_timer_thread(void* arg) {
     int item_id = *(int*)arg;
@@ -212,7 +212,7 @@ void* auction_timer_thread(void* arg) {
     return NULL;
 }
 
-// ==================== HISTORY FUNCTIONS ====================
+// HISTORY FUNCTIONS
 
 void log_to_history(int bidder_id, int item_id, int bid_amount,
                     int accepted, const char* notification) {
@@ -296,7 +296,7 @@ void print_history(void) {
     printf("========================================\n");
 }
 
-// ==================== STATISTICS FUNCTIONS ====================
+// STATISTICS FUNCTIONS
 
 void update_peak_concurrent_bidders(int current_active) {
     pthread_mutex_lock(&stats_mutex);
@@ -357,23 +357,23 @@ void print_statistics(void) {
     printf("╚════════════════════════════════════════════════════════════════╝\n");
 }
 
-// ==================== CORE BID PROCESSING ====================
+// CORE BID PROCESSING 
 
 /*
  * process_bid  (mutex-protected, atomic bid update)
  *
  * DEADLOCK FIX:
- *   Previously, notify_outbid() was called INSIDE the items[item_id].mutex
+ *   Previously, notify_outbid() was called inside the items[item_id].mutex
  *   critical section.  notify_outbid -> check_and_place_auto_bid ->
  *   process_bid -> pthread_mutex_lock(items[item_id].mutex) = deadlock.
  *
  *   Fix: record which bidder was outbid inside the lock, release the mutex,
- *   THEN issue notifications and trigger auto-bids.
+ *   then issue notifications and trigger auto-bids.
  */
 void* process_bid(void* arg) {
     bid_action* bid = (bid_action*)arg;
 
-    // Acquire semaphore slot (limits concurrent bids to MAX_CONCURRENT_BIDS)
+    // acquire semaphore slot (limits concurrent bids to MAX_CONCURRENT_BIDS)
     wait_for_bidding_slot();
 
     // FIX: protect current_active_bidders with stats_mutex to avoid data race
@@ -394,7 +394,7 @@ void* process_bid(void* arg) {
            bid->is_auto_bid ? "(AUTO-BID)" : "");
     pthread_mutex_unlock(&log_mutex);
 
-    // Validate item index
+    // validate item index
     if (bid->item_id < 0 || bid->item_id >= MAX_ITEMS) {
         sprintf(notification, "ERROR: Invalid item ID %d", bid->item_id);
         log_to_history(bid->bidder_id, bid->item_id, bid->bid_amount, 0, notification);
@@ -406,7 +406,7 @@ void* process_bid(void* arg) {
         return NULL;
     }
 
-    // Variables to carry outbid info out of the critical section
+    // variables to carry outbid info out of the critical section
     int accepted          = 0;
     int old_price         = 0;
     int outbid_bidder_id  = -1;
@@ -417,7 +417,7 @@ void* process_bid(void* arg) {
     // ---- CRITICAL SECTION START ----
     pthread_mutex_lock(&items[bid->item_id].mutex);
 
-    // Check for timeout
+    // check for timeout
     if (time(NULL) > items[bid->item_id].end_time) {
         items[bid->item_id].is_active = 0;
         sprintf(notification, "\033[31mREJECTED: Auction for Item %d has ended\033[0m", bid->item_id);
@@ -456,7 +456,7 @@ void* process_bid(void* arg) {
         old_price            = items[bid->item_id].current_price;
         outbid_bidder_id     = items[bid->item_id].highest_bidder_id;
 
-        // Atomic update
+        // atomic update
         items[bid->item_id].current_price      = bid->bid_amount;
         items[bid->item_id].highest_bidder_id  = bid->bidder_id;
         accepted = 1;
@@ -465,7 +465,7 @@ void* process_bid(void* arg) {
         log_to_history(bid->bidder_id, bid->item_id, bid->bid_amount, 1, notification);
         update_statistics(bid->item_id, bid->bid_amount, 1, bid->is_auto_bid);
 
-        // Signal the timer thread (can be done while holding the mutex)
+        // signal the timer thread (can be done while holding the mutex)
         pthread_cond_signal(&items[bid->item_id].cond);
 
         pthread_mutex_lock(&log_mutex);
@@ -490,7 +490,7 @@ void* process_bid(void* arg) {
     // ---- CRITICAL SECTION END ----
     pthread_mutex_unlock(&items[bid->item_id].mutex);
 
-    // Notifications are issued AFTER the mutex is released.
+    // notifications are issued AFTER the mutex is released.
     // notify_outbid -> check_and_place_auto_bid -> (new thread) -> process_bid
     // now safely acquires items[item_id].mutex without deadlocking.
     if (accepted) {
