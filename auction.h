@@ -12,9 +12,9 @@
 #define MAX_BIDDERS 10
 #define MAX_HISTORY 1000
 
-// ==================== STRUCT DEFINITIONS ====================
+//  STRUCT DEFINITIONS
 
-// Auction Item Structure (Shared Resource)
+// auction item structure (Shared Resource)
 typedef struct {
     int item_id;
     char item_name[64];
@@ -26,7 +26,7 @@ typedef struct {
     pthread_cond_t cond;                // Condition variable for timeout
 } auction_item;
 
-// Bidder Structure (for tracking auto-bidding)
+// bidder structure (for tracking auto-bidding)
 typedef struct {
     int bidder_id;
     char bidder_name[32];
@@ -36,7 +36,7 @@ typedef struct {
     int current_item_bidding;           // Item they're currently bidding on (-1 if none)
 } bidder;
 
-// Bid Action Structure (passed to thread)
+// bid action structure (passed to thread)
 typedef struct {
     int bidder_id;
     int item_id;
@@ -44,7 +44,7 @@ typedef struct {
     int is_auto_bid;                    // Whether this is an auto-bid
 } bid_action;
 
-// Auction History Record
+// auction history record
 typedef struct {
     int bid_id;
     int bidder_id;
@@ -55,7 +55,7 @@ typedef struct {
     char notification_sent[128];        // Record of notification sent
 } bid_history;
 
-// Auction Statistics Structure
+// auction statistics structure
 typedef struct {
     int total_bids_placed;
     int total_accepted_bids;
@@ -70,7 +70,7 @@ typedef struct {
     int active_bidders_count;           // Peak concurrent bidders
 } auction_stats;
 
-// ==================== GLOBAL DECLARATIONS ====================
+//  GLOBAL DECLARATIONS
 
 extern auction_item items[MAX_ITEMS];
 extern bidder bidders[MAX_BIDDERS];
@@ -79,39 +79,39 @@ extern auction_stats stats;
 extern int history_count;
 extern int num_bidders;
 
-// Mutexes
+// mutexes
 extern pthread_mutex_t log_mutex;
 extern pthread_mutex_t history_mutex;
 extern pthread_mutex_t stats_mutex;
 extern pthread_mutex_t bidder_mutex;
 
-// ==================== FUNCTION PROTOTYPES ====================
+// FUNCTION PROTOTYPES
 
-// Core auction functions
+// core auction functions
 void initialize_auction_items(void);
 void initialize_bidders(void);
 void* process_bid(void* arg);
 void* auction_timer_thread(void* arg);
 
-// Auto-bidding functions
+// auto-bidding functions
 int check_and_place_auto_bid(int bidder_id, int item_id, int current_price);
 void notify_outbid(int bidder_id, int item_id, int new_price, int new_highest_bidder);
 
-// History functions
+// history functions
 void log_to_history(int bidder_id, int item_id, int bid_amount, int accepted, const char* notification);
 void save_history_to_file(void);
 void print_history(void);
 
-// Statistics functions
+// statistics functions
 void update_statistics(int item_id, int bid_amount, int accepted, int is_auto_bid);
 void print_statistics(void);
 void update_peak_concurrent_bidders(int current_active);
 
-// Notification functions
+// notification functions
 void broadcast_notification(const char* message, int exclude_bidder);
 void send_private_notification(int bidder_id, const char* message);
 
-// Cleanup functions
+// cleanup functions
 void cleanup_auction_items(void);
 void print_auction_results(void);
 
